@@ -4,50 +4,42 @@
   <meta charset="UTF-8">
   <script src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
   <script src="//cdn.socket.io/socket.io-1.3.4.js"></script>
+  <link href="index.css" rel="stylesheet" type="text/css">
   <title>ViChat</title>
-  <style>
-    #local, .remote{
-      transform: rotateY(180deg);
-    }
-    #log, #logice{
-      display:inline-block;
-      overflow: scroll;
-      height: 600px;
-      width: 100%;
-    }
-    
-    #logice{
-      background-color: #222;
-      color: white;
-    }
-    
-    .hide{
-      display: none;
-    }
-  </style>
 </head>
 <body>
-  <div id="videos">
-    <video id="local" width="400" height="300" autoplay="1"></video>
-  </div>
-  <button onclick="connect();">Connect</button>
-  <button onclick="hangup();">Hangup</button><br>
-  <div id="chat">
-    chat area
-  </div>
-  <textarea id="send"></textarea>
-  <button onclick="sendChat();">Send</button><br>
-  
-  <button onclick="$('#dev').toggleClass('hide');">For Developers</button>
-  <div id="dev" class="hide">
-    <div id="log">
-      Hello.
+  <header id="page_header">
+		<h1>ViChat</h1>
+		<div id="head_menu">
+			<ul id="left_menu">
+			</ul>
+			<ul id="menu">
+			</ul>
+		</div>
+	</header>
+  <main>
+    <div id="videos">
+      <video id="local" width="400" height="300" autoplay="1"></video>
     </div>
-    <br>
-    <div id="logice">
-      Hellow.
+    <button onclick="connect();">Connect</button>
+    <button onclick="hangup();">Hangup</button><br>
+    <div id="chat">
+      chat area
     </div>
-  </div>
+    <textarea id="send"></textarea>
+    <button onclick="sendChat();">Send</button><br>
+    
+    <button onclick="$('#dev').toggleClass('hide');">For Developers</button>
+    <div id="dev" class="hide">
+      <div id="log">
+        Hello.
+      </div>
+      <br>
+      <div id="logice">
+        Hellow.
+      </div>
+    </div>
+  </main>
   
   <script>
     window.RTCPeerConnection = ( window.webkitPeerConnection00 ||
