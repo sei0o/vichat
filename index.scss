@@ -166,7 +166,21 @@ main{
 // -------------- video -----------
 
 #local, .remote{
+  position: relative;
+  display: inline-block;
+}
+
+#local > video, .remote > video{
   transform: rotateY(180deg);
+}
+
+.video-name{
+  color:white;
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  font-family: "mplus-1p-bold";
+  
 }
 
 // ------------ logs -------------

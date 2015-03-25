@@ -18,11 +18,17 @@
 		</div>
 	</header>
   <main>
+    <div id="members">
+    </div>
     <div id="videos">
-      <video id="local" width="400" height="300" autoplay="1"></video>
+      <div id="local">
+        <video width="400" height="300" autoplay="1"></video>
+      </div>
     </div>
     <button onclick="connect();">Connect</button>
     <button onclick="hangup();">Hangup</button><br>
+    <input type="text" placeholder="ニックネーム" id="nickname" value="名無しさん">
+    <button onclick="changeName();">名前を変える</button>
     <div id="chat">
       chat area
     </div>
@@ -63,6 +69,7 @@
     var peerConnection = null;
     var peerStarted = false;
     var connections = {};
+    var members = {};
     var mediaConstraints = {"mandatory": {'OfferToReceiveAudio':true, 'OfferToReceiveVideo':true}};
     var socket = io.connect("http://sei0o.cf:9999/", {
       forceNew: true,
@@ -72,8 +79,17 @@
     socket.on("message", onMessage);
     socket.on("user disconnected", onHangup);
     socket.on("hangedup", onHangup);
+
+    startVideo();
     
-    startVideo("screen");
+    var timer = setInterval(reloadMembers, 30000); // 定期的にmemberを取得
+    
+    // ---------- user info -----------
+    
+    function changeName(){
+      socket.json.send({ type: "change-name" });
+      reloadMembers();
+    }
     
     // ---------- Multiple Connection ---------
     
@@ -85,9 +101,10 @@
       this.dataChannel = null; // データチャンネル
     }
     
-    function membersPing() {
+    function membersPing(func) {
       put("send Ping");
       
+      onPong = func; // コールバックを用意しておく
       socket.json.send({ type: "ping" });
     }
     
@@ -103,7 +120,7 @@
       delete connections[id];
       
       // video要素を削除
-      $(".remote[data-socket-id='" + id + "']").remove();
+      $(".remote[data-socket-id='" + id + "'] > video").remove();
     }
     
     function eachConnection(func){
@@ -188,13 +205,18 @@
       peer.addStream(localStream);
       peer.addEventListener("addstream", function(event){
         put("Added Stream");
-        $("<video>").attr("src", URL.createObjectURL(event.stream))
-                    .addClass("remote")
-                    .attr("width", 400)
-                    .attr("height", 300)
-                    .attr("autoplay", "1")
-                    .attr("data-socket-id", conn.id) // ユーザ識別用
-                    .appendTo("#videos");
+        var videoElm = $("<video>").attr("src", URL.createObjectURL(event.stream))
+                                   .attr("width", 400)
+                                   .attr("height", 300)
+                                   .attr("autoplay", "1")
+        var spanElm = $("<span>").addClass("video-name")
+                                 .text(members[conn.id] || "");
+          
+        var divElm = $("<div>").addClass("remote")
+                               .attr("data-socket-id", conn.id) // ユーザ識別用
+                               .append(videoElm)
+                               .append(spanElm)
+                               .appendTo("#videos");
       }, false);
       
       return conn;
@@ -271,27 +293,29 @@
       $("#chat").append("<br>" + $("#send").val());
       
       eachConnection(function(conn){
-        conn.dataChannel.send( JSON.stringify({ type: "text", content: $("#send").val() }) );
+        conn.dataChannel.send( JSON.stringify({ type: "text", content: $("#send").val(), from: socket.io.engine.id }) );
       });
     }
     
     function onChatData(evt) {
       console.log(evt);
-      $("#chat").append("<br>" + JSON.parse(evt.data).content);
+      $("#chat").append("<br>" + members[evt.from] +": "+ JSON.parse(evt.data).content);
     }
     
     // ------------ Call Start/End -----------
     
     function connect(){
       if (localStream && socketReady) {
-        membersPing();
+        membersPing(function(evt){
+          sendOffer(evt.from);
+        });
       }
     }
     
     function stopAll() {
       put("Stop All");
       
-      for (var id in connections) { // for..inはキーを反復する
+      for (var id in connections) { // for..inは"キー"を反復する
         stopConnection(id);
       }
       peerStarted = false;
@@ -314,7 +338,7 @@
         { video: true, audio: true },
         function(stream){
           localStream = stream;
-          $("#local").attr("src", URL.createObjectURL(stream));
+          $("#local > video").attr("src", URL.createObjectURL(stream));
         },
         function(error){
           console.log(error);
@@ -329,6 +353,12 @@
       
       socketReady = true;
       socket.emit("enter", getQueryRoom());
+      reloadMembers();
+    }
+    
+    function onPong(evt) {
+      // membersPing()のcallbackとして利用されます
+      return;
     }
     
     function onMessage(evt) {
@@ -337,19 +367,19 @@
       var conn = connections[id];
       
       if (evt.type === "ping") {
-        if (conn) return; // すでに接続中
-        
         put("received Ping");
-        socket.json.send({ type: "pong", sendto: id });
+        socket.json.send({ type: "pong", sendto: id, nickname: $("#nickname").val() });
       }else if (evt.type == "pong") {
         put("received Pong");
-        sendOffer(id);
+        onPong(evt);
       } else if (evt.type == 'offer')
         onOffer(evt);      
       else if (evt.type == 'answer')
         onAnswer(evt);
       else if (evt.type == 'candidate') 
         onCandidate(evt);
+      else if (evt.type == "change-name")
+        reloadMembers();
       else
         put("Didn't match type: " + evt.type);
     }
@@ -378,6 +408,15 @@
       }else{ // 部屋指定なし
         return "public";
       }
+    }
+    
+    function reloadMembers() {
+      $("#members").html(getQueryRoom() +" : <strong>"+  $("#nickname").val() +"("+ socket.io.engine.id +")" +"</strong>");
+      membersPing(function(evt){
+        members[evt.from] = evt.nickname;
+        $("#members").append(" "+ evt.nickname +"("+ evt.from +")");
+        $(".remote[data-socket-id='" + evt.from + "'] > span").text(evt.nickname);
+      });
     }
     
   </script> 
