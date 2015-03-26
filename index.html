@@ -119,8 +119,8 @@
       
       delete connections[id];
       
-      // video要素を削除
-      $(".remote[data-socket-id='" + id + "'] > video").remove();
+      // videoを削除
+      $(".remote[data-socket-id='" + id + "']").remove();
     }
     
     function eachConnection(func){
@@ -209,14 +209,15 @@
                                    .attr("width", 400)
                                    .attr("height", 300)
                                    .attr("autoplay", "1")
-        var spanElm = $("<span>").addClass("video-name")
-                                 .text(members[conn.id] || "");
+        var spanElm = $("<span>").addClass("video-name");
           
         var divElm = $("<div>").addClass("remote")
                                .attr("data-socket-id", conn.id) // ユーザ識別用
                                .append(videoElm)
                                .append(spanElm)
                                .appendTo("#videos");
+                               
+        reloadMembers();
       }, false);
       
       return conn;
@@ -307,7 +308,10 @@
     function connect(){
       if (localStream && socketReady) {
         membersPing(function(evt){
-          sendOffer(evt.from);
+          // まだ繋いでいない相手のみofferを送る
+          if (!connections[evt.from]) {
+            sendOffer(evt.from);
+          }
         });
       }
     }
